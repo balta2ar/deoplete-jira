@@ -15,6 +15,7 @@ $HOME/bin/jira -u <user> ls -p UOP | sed -e 's/://' -e 's/ \+/ /g' | sort -r -V 
 from .base import Base
 
 #import re
+import os
 from os.path import expanduser, expandvars
 import regex as re
 from time import strftime, time
@@ -39,7 +40,8 @@ def measure(func):
 
 
 def log(msg):
-    return
+    if os.environ.get('NVIM_PYTHON_LOG_LEVEL', None) != 'DEBUG':
+        return
     timestamp = strftime("%Y-%m-%d %H:%M:%S")
     with open('/tmp/jira.completer.log', 'a+') as file_object:
         file_object.write('%s ' % timestamp + msg + '\n')
