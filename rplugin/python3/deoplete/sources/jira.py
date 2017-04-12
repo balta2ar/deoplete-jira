@@ -21,10 +21,10 @@ import regex as re
 from time import strftime, time
 from pprint import pformat
 
-#CANDIDATES_FILENAME = '/tmp/rt.candidates.txt'
-CANDIDATES_FILENAME = expandvars(expanduser('~/.cache/rt/jira.candidates.txt'))
-JIRA_PATTERN = r'UOP-?\w*$'
-RX_RT = re.compile(JIRA_PATTERN, re.IGNORECASE)
+from deoplete.util import load_external_module
+current = __file__
+load_external_module(current, 'sources/jira_matcher')
+from jira_matcher import MyJiraMatcher, JIRA_PATTERN, CANDIDATES_FILENAME
 
 
 def measure(func):
@@ -69,85 +69,85 @@ def read_candidates(filename):
         return candidates
 
 
-class MyMatcher(object):
-    def __init__(self, prefixes):
-        self._prefixes = prefixes
-
-    def get_complete_str(self, context):
-        # Cut off and remember RT prefix
-        complete_str = context['complete_str']
-        for prefix in self._prefixes:
-            if complete_str.startswith(prefix):
-                return prefix, complete_str[len(prefix):]
-        else:
-            return None, None
-
-    def get_complete_position(self, context):
-        match = RX_RT.search(context['input'])
-        pos = match.start() if match else -1
-        return pos
-
-    def load_raw_candidates(self, filename, complete_str):
-        # Read candidates, cut off http part and fuzzy match by long description
-        candidates_from_file = self.read_candidates(filename)
-        #candidates_from_file = self.modify_candidates(candidates_from_file)
-        candidates_without_http = candidates_from_file
-        # for candidate in candidates_from_file:
-        #     pos = candidate.find(' http')
-        #     candidates_without_http.append(candidate[:pos] if pos != -1 else candidate)
-
-        if complete_str is not None and len(complete_str):
-            filtered_candidates = self.filter_raw_candidates(complete_str, candidates_without_http)
-        else:
-            filtered_candidates = sorted(candidates_without_http, reverse=True)
-        return filtered_candidates
-
-    def read_candidates(self, filename):
-        with open(filename) as file_object:
-            lines = file_object.readlines()
-            candidates = [str(line.strip()) for line in lines]
-            return candidates
-
-    def modify_candidates(self, raw_candidates):
-        result = []
-        for candidate in raw_candidates:
-            parts = candidate.split()
-            line = parts[0:1] + parts[2:]
-            result.append(' '.join(line))
-        return result
-
-    def prepare_deoplete_candidates(self, prefix, raw_candidates):
-        result = []
-        for x in raw_candidates:
-            # short = prefix + x[:6]
-            # long_ = prefix + x
-            short = x[:x.find(' ')] #prefix + x[:6]
-            long_ = x #prefix + x
-            item = {'word': short, 'abbr': long_}
-            result.append(item)
-        return result
-
-    def check_match(self, pattern, text):
-        pattern = str(pattern) if not isinstance(pattern, str) else pattern
-        regex = re.compile('(?:%s){i}' % pattern, re.IGNORECASE | re.BESTMATCH)
-        r = regex.search(str(text))
-        return True if r else False
-
-    def filter_raw_candidates(self, pattern, raw_candidates):
-        pattern = str(pattern) if not isinstance(pattern, str) else pattern
-        suggestions = []
-        for item in raw_candidates:
-            if self.check_match(pattern, item):
-                suggestions.append(item)
-        return sorted(suggestions)
-
-    def filter_deoplete_candidates(self, pattern, deoplete_candidates):
-        pattern = str(pattern) if not isinstance(pattern, str) else pattern
-        suggestions = []
-        for item in deoplete_candidates:
-            if self.check_match(pattern, item['abbr']):
-                suggestions.append(item)
-        return suggestions
+# class MyMatcher(object):
+#     def __init__(self, prefixes):
+#         self._prefixes = prefixes
+#
+#     def get_complete_str(self, context):
+#         # Cut off and remember RT prefix
+#         complete_str = context['complete_str']
+#         for prefix in self._prefixes:
+#             if complete_str.startswith(prefix):
+#                 return prefix, complete_str[len(prefix):]
+#         else:
+#             return None, None
+#
+#     def get_complete_position(self, context):
+#         match = RX_RT.search(context['input'])
+#         pos = match.start() if match else -1
+#         return pos
+#
+#     def load_raw_candidates(self, filename, complete_str):
+#         # Read candidates, cut off http part and fuzzy match by long description
+#         candidates_from_file = self.read_candidates(filename)
+#         #candidates_from_file = self.modify_candidates(candidates_from_file)
+#         candidates_without_http = candidates_from_file
+#         # for candidate in candidates_from_file:
+#         #     pos = candidate.find(' http')
+#         #     candidates_without_http.append(candidate[:pos] if pos != -1 else candidate)
+#
+#         if complete_str is not None and len(complete_str):
+#             filtered_candidates = self.filter_raw_candidates(complete_str, candidates_without_http)
+#         else:
+#             filtered_candidates = sorted(candidates_without_http, reverse=True)
+#         return filtered_candidates
+#
+#     def read_candidates(self, filename):
+#         with open(filename) as file_object:
+#             lines = file_object.readlines()
+#             candidates = [str(line.strip()) for line in lines]
+#             return candidates
+#
+#     def modify_candidates(self, raw_candidates):
+#         result = []
+#         for candidate in raw_candidates:
+#             parts = candidate.split()
+#             line = parts[0:1] + parts[2:]
+#             result.append(' '.join(line))
+#         return result
+#
+#     def prepare_deoplete_candidates(self, prefix, raw_candidates):
+#         result = []
+#         for x in raw_candidates:
+#             # short = prefix + x[:6]
+#             # long_ = prefix + x
+#             short = x[:x.find(' ')] #prefix + x[:6]
+#             long_ = x #prefix + x
+#             item = {'word': short, 'abbr': long_}
+#             result.append(item)
+#         return result
+#
+#     def check_match(self, pattern, text):
+#         pattern = str(pattern) if not isinstance(pattern, str) else pattern
+#         regex = re.compile('(?:%s){i}' % pattern, re.IGNORECASE | re.BESTMATCH)
+#         r = regex.search(str(text))
+#         return True if r else False
+#
+#     def filter_raw_candidates(self, pattern, raw_candidates):
+#         pattern = str(pattern) if not isinstance(pattern, str) else pattern
+#         suggestions = []
+#         for item in raw_candidates:
+#             if self.check_match(pattern, item):
+#                 suggestions.append(item)
+#         return sorted(suggestions)
+#
+#     def filter_deoplete_candidates(self, pattern, deoplete_candidates):
+#         pattern = str(pattern) if not isinstance(pattern, str) else pattern
+#         suggestions = []
+#         for item in deoplete_candidates:
+#             if self.check_match(pattern, item['abbr']):
+#                 suggestions.append(item)
+#         return suggestions
 
 
 class Source(Base):
@@ -164,7 +164,7 @@ class Source(Base):
         self.max_abbr_width = 120
         self.input_pattern = JIRA_PATTERN
 
-        self.mymatcher = MyMatcher(prefixes=['UOP', 'UOP-'])
+        self.mymatcher = MyJiraMatcher(prefixes=['UOP-', 'UOP'])
         log('CONSTRUCTOR %s' % self.input_pattern)
 
     def get_complete_position(self, context):
